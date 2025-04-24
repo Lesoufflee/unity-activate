@@ -1,5 +1,4 @@
-ARG IMAGE
-FROM $IMAGE
+FROM unityci/editor:editor-ubuntu-2022.3.14f1-android-3.1.0
 
 LABEL "com.github.actions.name"="Unity - Activate"
 LABEL "com.github.actions.description"="Activate Unity using credentials or a license file. Both personal and professional licenses are supported."
