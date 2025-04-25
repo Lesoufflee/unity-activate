@@ -1,96 +1,41 @@
 #!/usr/bin/env bash
+set -e
 
-# Create directory for license activation
-ACTIVATE_LICENSE_PATH="$GITHUB_WORKSPACE/_activate-license"
-mkdir -p "$ACTIVATE_LICENSE_PATH"
+UNITY_BIN="/opt/unity/Editor/Unity"
+ACTIVATE_DIR="$GITHUB_WORKSPACE/_activate-license"
+mkdir -p "$ACTIVATE_DIR"
+pushd "$ACTIVATE_DIR"
 
-# Run in ACTIVATE_LICENSE_PATH directory
-echo "Changing to \"$ACTIVATE_LICENSE_PATH\" directory."
-pushd "$ACTIVATE_LICENSE_PATH"
+echo "Создание запроса на активацию (ALF)..."
+"$UNITY_BIN" -batchmode -nographics -logFile /dev/stdout -quit -createManualActivationFile
 
-# Determine activation strategy
-if [[ -n "$UNITY_LICENSE" ]]; then
-  #
-  # LICENSE FILE ACTIVATION (ulf mode)
-  #
-  echo "Requesting activation (license file mode)"
+ALF_FILE=$(find . -name "*.alf" | head -n 1)
+if [[ ! -f "$ALF_FILE" ]]; then
+  echo "Ошибка: файл .alf не создан."
+  exit 1
+fi
+echo "Создан файл запроса: $ALF_FILE"
 
-  FILE_PATH=UnityLicenseFile.ulf
+echo "Установка unity-license-activate..."
+npm install -g unity-license-activate@latest
 
-  echo "$UNITY_LICENSE" | tr -d '\r' > "$FILE_PATH"
-
-  ACTIVATION_OUTPUT=$(unity-editor \
-    -logFile /dev/stdout \
-    -quit \
-    -manualLicenseFile "$FILE_PATH")
-
-  UNITY_EXIT_CODE=$?
-
-  ACTIVATION_SUCCESSFUL=$(echo "$ACTIVATION_OUTPUT" | grep -c 'Next license update check is after')
-
-  if [[ $ACTIVATION_SUCCESSFUL -eq 1 ]]; then
-    UNITY_EXIT_CODE=0
-  fi
-
-  rm -f "$FILE_PATH"
-
-elif [[ "$UNITY_SERIAL" == "none" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
-  #
-  # PERSONAL LICENSE ACTIVATION (login mode without ULF)
-  #
-  echo "Requesting activation (personal license via login)"
-
-  unity-editor \
-    -logFile /dev/stdout \
-    -quit \
-    -username "$UNITY_EMAIL" \
-    -password "$UNITY_PASSWORD"
-
-  UNITY_EXIT_CODE=$?
-
-elif [[ -n "$UNITY_SERIAL" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
-  #
-  # PROFESSIONAL LICENSE ACTIVATION (serial mode)
-  #
-  echo "Requesting activation (professional license via serial)"
-
-  unity-editor \
-    -logFile /dev/stdout \
-    -quit \
-    -serial "$UNITY_SERIAL" \
-    -username "$UNITY_EMAIL" \
-    -password "$UNITY_PASSWORD"
-
-  UNITY_EXIT_CODE=$?
-
-else
-  #
-  # NO VALID ACTIVATION STRATEGY
-  #
-  echo "License activation strategy could not be determined."
-  echo ""
-  echo "Visit https://game.ci/docs/github/getting-started for setup instructions."
-
+echo "Отправка запроса на сервер Unity..."
+unity-license-activate "$UNITY_EMAIL" "$UNITY_PASSWORD" "$ALF_FILE"
+if [[ $? -ne 0 ]]; then
+  echo "Ошибка: не удалось получить файл активации."
   exit 1
 fi
 
-# Handle result
-if [ "$UNITY_EXIT_CODE" -eq 0 ]; then
-  echo "Activation complete."
-else
-  echo "###########################"
-  echo "#         Failure         #"
-  echo "###########################"
-  echo ""
-  echo "Please note that the exit code is not very descriptive."
-  echo "Most likely it will not help you solve the issue."
-  echo ""
-  echo "To find the reason for failure: please search for errors in the log above."
-  echo ""
-  echo "Exit code was: $UNITY_EXIT_CODE"
-  exit "$UNITY_EXIT_CODE"
+ULF_FILE=$(find . -name "*.ulf" | head -n 1)
+if [[ ! -f "$ULF_FILE" ]]; then
+  echo "Ошибка: файл .ulf не получен."
+  exit 1
 fi
+echo "Получен файл лицензии: $ULF_FILE"
 
-# Return to previous working directory
+echo "Активация лицензии в Unity..."
+"$UNITY_BIN" -batchmode -nographics -logFile /dev/stdout -quit -manualLicenseFile "$ULF_FILE"
+
+echo "Лицензия успешно активирована."
+
 popd
-
