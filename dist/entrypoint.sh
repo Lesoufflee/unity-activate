@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+# Установка Node.js и npm внутри контейнера
+echo "Установка Node.js и npm..."
+apt-get update
+apt-get install -y nodejs npm
+
 UNITY_BIN="/opt/unity/Editor/Unity"
 ACTIVATE_DIR="$GITHUB_WORKSPACE/_activate-license"
 mkdir -p "$ACTIVATE_DIR"
