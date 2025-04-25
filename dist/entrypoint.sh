@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-#
 # Create directory for license activation
-#
 ACTIVATE_LICENSE_PATH="$GITHUB_WORKSPACE/_activate-license"
 mkdir -p "$ACTIVATE_LICENSE_PATH"
 
@@ -10,10 +8,8 @@ mkdir -p "$ACTIVATE_LICENSE_PATH"
 echo "Changing to \"$ACTIVATE_LICENSE_PATH\" directory."
 pushd "$ACTIVATE_LICENSE_PATH"
 
-#
 # Determine activation strategy
-#
-if [[ -n "$UNITY_LICENSE" ]] || [[ -n "$UNITY_LICENSE_FILE" ]]; then
+if [[ -n "$UNITY_LICENSE" ]]; then
   #
   # LICENSE FILE ACTIVATION (ulf mode)
   #
@@ -21,11 +17,7 @@ if [[ -n "$UNITY_LICENSE" ]] || [[ -n "$UNITY_LICENSE_FILE" ]]; then
 
   FILE_PATH=UnityLicenseFile.ulf
 
-  if [[ -n "$UNITY_LICENSE" ]]; then
-    echo "$UNITY_LICENSE" | tr -d '\r' > "$FILE_PATH"
-  elif [[ -n "$UNITY_LICENSE_FILE" ]]; then
-    cat "$UNITY_LICENSE_FILE" | tr -d '\r' > "$FILE_PATH"
-  fi
+  echo "$UNITY_LICENSE" | tr -d '\r' > "$FILE_PATH"
 
   ACTIVATION_OUTPUT=$(unity-editor \
     -logFile /dev/stdout \
@@ -42,9 +34,9 @@ if [[ -n "$UNITY_LICENSE" ]] || [[ -n "$UNITY_LICENSE_FILE" ]]; then
 
   rm -f "$FILE_PATH"
 
-elif [[ ("$UNITY_SERIAL" == "none" || -z "$UNITY_SERIAL") && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
+elif [[ "$UNITY_SERIAL" == "none" && -n "$UNITY_EMAIL" && -n "$UNITY_PASSWORD" ]]; then
   #
-  # PERSONAL LICENSE ACTIVATION (login mode)
+  # PERSONAL LICENSE ACTIVATION (login mode without ULF)
   #
   echo "Requesting activation (personal license via login)"
 
@@ -82,9 +74,7 @@ else
   exit 1
 fi
 
-#
 # Handle result
-#
 if [ "$UNITY_EXIT_CODE" -eq 0 ]; then
   echo "Activation complete."
 else
